@@ -170,7 +170,7 @@ export default function FormPage() {
     if (!result.success) {
       // Extract errors and set them in state
       const formattedErrors: Record<string, string> = {};
-      result.error.errors.forEach((error) => {
+      result.error.issues.forEach((error: any) => {
         if (error.path[0]) {
           formattedErrors[error.path[0].toString()] = error.message;
         }
