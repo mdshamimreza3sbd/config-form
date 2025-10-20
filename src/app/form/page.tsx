@@ -128,7 +128,7 @@ export default function FormPage() {
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lowercase = "abcdefghijklmnopqrstuvwxyz";
     const numbers = "0123456789";
-    const symbols = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+    const symbols = "!@#$%*_+-[],:.<>"; // Excluded: =, &, ', ", ;, ^, (, ), {, }, |, ?
     const allChars = uppercase + lowercase + numbers + symbols;
 
     let password = "";
