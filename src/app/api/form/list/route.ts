@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Configuration from "@/models/Configuration";
 import { verifyRequest } from "@/lib/jwt";
+import connectDB from "@/lib/mongodb";
+import Form from "@/models/Form";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,19 +22,19 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    // Fetch configurations for the user
-    const configurations = await Configuration.find({ userId: payload.userId })
+    // Fetch forms for the user
+    const forms = await Form.find({ userId: payload.userId })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .select("-__v");
 
     // Get total count for pagination
-    const total = await Configuration.countDocuments({ userId: payload.userId });
+    const total = await Form.countDocuments({ userId: payload.userId });
 
     return NextResponse.json(
       {
-        configurations,
+        forms,
         pagination: {
           page,
           limit,
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
-    console.error("Configuration list error:", error);
+    console.error("Form list error:", error);
     return NextResponse.json(
       { error: "Internal server error. Please try again." },
       { status: 500 }

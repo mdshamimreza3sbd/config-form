@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Configuration from "@/models/Configuration";
+import Form from "@/models/Form";
 import { verifyRequest } from "@/lib/jwt";
 
 export async function POST(request: NextRequest) {
@@ -30,8 +30,6 @@ export async function POST(request: NextRequest) {
       "restaurantName",
       "outletName",
       "saPassword",
-      "nonSaUsername",
-      "nonSaPassword",
     ];
 
     for (const field of requiredFields) {
@@ -43,15 +41,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create configuration document
-    const configuration = await Configuration.create({
+    // Validate nonSaCredentials array
+    if (!data.nonSaCredentials || !Array.isArray(data.nonSaCredentials) || data.nonSaCredentials.length === 0) {
+      return NextResponse.json(
+        { error: "At least one Non-SA credential is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate each Non-SA credential
+    for (let i = 0; i < data.nonSaCredentials.length; i++) {
+      const credential = data.nonSaCredentials[i];
+      if (!credential.username || credential.username.trim() === "") {
+        return NextResponse.json(
+          { error: `Non-SA credential #${i + 1}: Username is required` },
+          { status: 400 }
+        );
+      }
+      if (!credential.password || credential.password.trim() === "") {
+        return NextResponse.json(
+          { error: `Non-SA credential #${i + 1}: Password is required` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create form document
+    const form = await Form.create({
       userId: payload.userId,
       username: payload.username,
       restaurantName: data.restaurantName,
       outletName: data.outletName,
       saPassword: data.saPassword,
-      nonSaUsername: data.nonSaUsername,
-      nonSaPassword: data.nonSaPassword,
+      nonSaCredentials: data.nonSaCredentials,
       anydeskUsername: data.anydeskUsername || "",
       anydeskPassword: data.anydeskPassword || "",
       ultraviewerUsername: data.ultraviewerUsername || "",
@@ -71,18 +93,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: "Configuration submitted successfully",
-        configuration: {
-          id: configuration._id,
-          restaurantName: configuration.restaurantName,
-          outletName: configuration.outletName,
-          createdAt: configuration.createdAt,
+        message: "Form submitted successfully",
+        form: {
+          id: form._id,
+          restaurantName: form.restaurantName,
+          outletName: form.outletName,
+          createdAt: form.createdAt,
         },
       },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Configuration submission error:", error);
+    console.error("Form submission error:", error);
     return NextResponse.json(
       { error: "Internal server error. Please try again." },
       { status: 500 }

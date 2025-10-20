@@ -1,13 +1,17 @@
 import mongoose, { Document, Schema } from "mongoose";
 
-export interface IConfiguration extends Document {
+interface INonSaCredential {
+  username: string;
+  password: string;
+}
+
+export interface IForm extends Document {
   userId: string;
   username: string;
   restaurantName: string;
   outletName: string;
   saPassword: string;
-  nonSaUsername: string;
-  nonSaPassword: string;
+  nonSaCredentials: INonSaCredential[];
   anydeskUsername?: string;
   anydeskPassword?: string;
   ultraviewerUsername?: string;
@@ -27,7 +31,7 @@ export interface IConfiguration extends Document {
   updatedAt: Date;
 }
 
-const ConfigurationSchema: Schema = new Schema(
+const FormSchema: Schema = new Schema(
   {
     userId: {
       type: String,
@@ -51,14 +55,27 @@ const ConfigurationSchema: Schema = new Schema(
       type: String,
       required: [true, "SA password is required"],
     },
-    nonSaUsername: {
-      type: String,
-      required: [true, "Non-SA username is required"],
-      trim: true,
-    },
-    nonSaPassword: {
-      type: String,
-      required: [true, "Non-SA password is required"],
+    nonSaCredentials: {
+      type: [
+        {
+          username: {
+            type: String,
+            required: [true, "Non-SA username is required"],
+            trim: true,
+          },
+          password: {
+            type: String,
+            required: [true, "Non-SA password is required"],
+          },
+        },
+      ],
+      required: [true, "At least one Non-SA credential is required"],
+      validate: {
+        validator: function (v: any[]) {
+          return v && v.length > 0;
+        },
+        message: "At least one Non-SA credential is required",
+      },
     },
     anydeskUsername: {
       type: String,
@@ -125,8 +142,12 @@ const ConfigurationSchema: Schema = new Schema(
 );
 
 // Index for faster queries
-ConfigurationSchema.index({ userId: 1, createdAt: -1 });
-ConfigurationSchema.index({ restaurantName: 1, outletName: 1 });
+FormSchema.index({ userId: 1, createdAt: -1 });
+FormSchema.index({ restaurantName: 1, outletName: 1 });
 
-export default mongoose.models.Configuration ||
-  mongoose.model<IConfiguration>("Configuration", ConfigurationSchema);
+// Delete the cached model to ensure we use the updated schema
+if (mongoose.models.Form) {
+  delete mongoose.models.Form;
+}
+
+export default mongoose.model<IForm>("Form", FormSchema);

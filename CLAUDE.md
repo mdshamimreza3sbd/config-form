@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Restaurant Configuration Management System built with Next.js 15, featuring JWT authentication, MongoDB integration, and a form-based interface for managing restaurant security configurations. The application allows authenticated users to submit and track restaurant configuration tasks including password changes, firewall settings, and remote access credentials.
+This is a Restaurant Form Management System built with Next.js 15, featuring JWT authentication, MongoDB integration, and a form-based interface for managing restaurant security forms. The application allows authenticated users to submit and track restaurant form tasks including password changes, firewall settings, and remote access credentials.
 
 ## Development Commands
 
@@ -33,7 +33,7 @@ pnpm start          # Start production server
 src/
 ├── app/
 │   ├── page.tsx                          # Login page
-│   ├── form/page.tsx                     # Main configuration form (protected route)
+│   ├── form/page.tsx                     # Main form (protected route)
 │   ├── layout.tsx                        # Root layout with Geist fonts
 │   ├── globals.css                       # Tailwind v4 CSS with custom variables
 │   └── api/
@@ -41,16 +41,16 @@ src/
 │       │   ├── login/route.ts            # POST: User login, returns JWT
 │       │   ├── verify/route.ts           # GET: Verify JWT token
 │       │   └── logout/route.ts           # POST: User logout
-│       └── configuration/
-│           ├── submit/route.ts           # POST: Submit configuration
-│           └── list/route.ts             # GET: List user configurations
+│       └── form/
+│           ├── submit/route.ts           # POST: Submit form
+│           └── list/route.ts             # GET: List user forms
 ├── lib/
 │   ├── mongodb.ts                        # MongoDB connection with caching
 │   ├── jwt.ts                            # JWT utilities (verifyToken, verifyRequest)
 │   └── utils.ts                          # Tailwind class merging (cn helper)
 └── models/
     ├── User.ts                           # User schema with plain-text password comparison
-    └── Configuration.ts                  # Configuration schema with indexes
+    └── Form.ts                           # Form schema with indexes
 ```
 
 ## Authentication & Security
@@ -73,13 +73,14 @@ src/
 
 ## Database Models
 
-**Configuration Model (`src/models/Configuration.ts`):**
-Stores restaurant security configuration submissions with:
-- Required fields: restaurantName, outletName, saPassword, nonSaUsername, nonSaPassword
+**Form Model (`src/models/Form.ts`):**
+Stores restaurant security form submissions with:
+- Required fields: restaurantName, outletName, saPassword, nonSaCredentials (array of {username, password})
 - Optional remote access: anydeskUsername, anydeskPassword, ultraviewerUsername, ultraviewerPassword
 - Boolean checkboxes: saPassChange, syncedUserPassChange, nonSaPassChange, windowsAuthDisable, sqlCustomPort, firewallOnAllPcs, anydeskUninstall, ultraviewerPassAndId, posAdminPassChange
 - Metadata: userId, username, userAgent, ipAddress, timestamps
 - Indexes: `{userId: 1, createdAt: -1}` and `{restaurantName: 1, outletName: 1}`
+- Note: nonSaCredentials supports multiple Non-SA users with Add/Remove functionality
 
 **MongoDB Connection (`src/lib/mongodb.ts`):**
 - Uses global caching to prevent multiple connections in development
@@ -88,9 +89,10 @@ Stores restaurant security configuration submissions with:
 
 ## Form Behavior & Validation
 
-**Configuration Form (`src/app/form/page.tsx`):**
+**Form Page (`src/app/form/page.tsx`):**
 - Uses Zod schema for client-side validation
 - Auto-generates 16-character passwords for SA and Non-SA fields (excludes single/double quotes)
+- Supports multiple Non-SA credentials with dynamic Add/Remove buttons (minimum 1 required)
 - Password fields are disabled; only regenerate button can change them
 - Copy button for generated passwords with visual feedback (green checkmark)
 - Compact UI design with reduced spacing
@@ -142,8 +144,8 @@ NODE_ENV=development
 - `GET /api/auth/verify` - Verify JWT token validity
 - `POST /api/auth/logout` - Logout (clears token)
 
-**Configuration:**
-- `POST /api/configuration/submit` - Submit new configuration (requires JWT)
-- `GET /api/configuration/list` - List user's configurations (requires JWT)
+**Form:**
+- `POST /api/form/submit` - Submit new form (requires JWT)
+- `GET /api/form/list` - List user's forms (requires JWT)
 
 All protected routes validate JWT using `verifyRequest()` from `@/lib/jwt`

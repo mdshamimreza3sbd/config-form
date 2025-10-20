@@ -1,18 +1,33 @@
 "use client";
 
-import { Check, Copy, RefreshCw } from "lucide-react";
+import { Check, Copy, Plus, RefreshCw, Trash2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { z } from "zod";
+import DraftPanel from "@/components/DraftPanel";
+import { saveDraft, DraftData } from "@/lib/draftStorage";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+// Non-SA credential schema
+const nonSaCredentialSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
 
 // Zod schema for form validation
 const formSchema = z.object({
   restaurantName: z.string().min(1, "Restaurant name is required"),
   outletName: z.string().min(1, "Outlet name is required"),
   saPassword: z.string().min(1, "SA password is required"),
-  nonSaUsername: z.string().min(1, "Non-SA username is required"),
-  nonSaPassword: z.string().min(1, "Non-SA password is required"),
+  nonSaCredentials: z.array(nonSaCredentialSchema).min(1, "At least one Non-SA credential is required"),
   anydeskUsername: z.string().optional(),
   anydeskPassword: z.string().optional(),
   ultraviewerUsername: z.string().optional(),
@@ -30,6 +45,7 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+type NonSaCredential = z.infer<typeof nonSaCredentialSchema>;
 
 export default function FormPage() {
   const router = useRouter();
@@ -39,8 +55,7 @@ export default function FormPage() {
     restaurantName: "",
     outletName: "",
     saPassword: "",
-    nonSaUsername: "",
-    nonSaPassword: "",
+    nonSaCredentials: [{ username: "", password: "" }],
     anydeskUsername: "",
     anydeskPassword: "",
     ultraviewerUsername: "",
@@ -61,6 +76,8 @@ export default function FormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [showDraftConfirm, setShowDraftConfirm] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   // Check authentication with JWT
   useEffect(() => {
@@ -139,12 +156,49 @@ export default function FormPage() {
     }));
   };
 
+  // Handle Non-SA credential input changes
+  const handleNonSaChange = (index: number, field: 'username' | 'password', value: string) => {
+    setFormData((prev) => {
+      const updated = [...prev.nonSaCredentials];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, nonSaCredentials: updated };
+    });
+  };
+
+  // Add new Non-SA credential
+  const addNonSaCredential = () => {
+    setFormData((prev) => ({
+      ...prev,
+      nonSaCredentials: [...prev.nonSaCredentials, { username: "", password: "" }],
+    }));
+  };
+
+  // Remove Non-SA credential
+  const removeNonSaCredential = (index: number) => {
+    if (formData.nonSaCredentials.length > 1) {
+      setFormData((prev) => ({
+        ...prev,
+        nonSaCredentials: prev.nonSaCredentials.filter((_, i) => i !== index),
+      }));
+    }
+  };
+
   const handleGeneratePassword = (fieldName: string) => {
     const newPassword = generatePassword(16);
     setFormData((prev) => ({
       ...prev,
       [fieldName]: newPassword,
     }));
+  };
+
+  // Generate password for Non-SA credential
+  const handleGenerateNonSaPassword = (index: number) => {
+    const newPassword = generatePassword(16);
+    setFormData((prev) => {
+      const updated = [...prev.nonSaCredentials];
+      updated[index] = { ...updated[index], password: newPassword };
+      return { ...prev, nonSaCredentials: updated };
+    });
   };
 
   const handleCopyPassword = async (fieldName: string) => {
@@ -154,6 +208,38 @@ export default function FormPage() {
       setCopiedField(fieldName);
       setTimeout(() => setCopiedField(null), 2000);
     }
+  };
+
+  // Copy Non-SA password
+  const handleCopyNonSaPassword = async (index: number) => {
+    const password = formData.nonSaCredentials[index]?.password;
+    if (password) {
+      await navigator.clipboard.writeText(password);
+      setCopiedField(`nonSa-${index}`);
+      setTimeout(() => setCopiedField(null), 2000);
+    }
+  };
+
+  const handleSaveDraft = () => {
+    // Check if required fields are filled
+    if (!formData.restaurantName || !formData.outletName) {
+      toast.error("Please fill in Restaurant Name and Outlet Name to save draft");
+      return;
+    }
+
+    // Show confirmation dialog
+    setShowDraftConfirm(true);
+  };
+
+  const handleConfirmSaveDraft = () => {
+    // Save draft
+    saveDraft(formData);
+    toast.success("Draft saved successfully!");
+    setShowDraftConfirm(false);
+  };
+
+  const handleLoadDraft = (draft: DraftData) => {
+    setFormData(draft.formData);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,8 +265,23 @@ export default function FormPage() {
       return;
     }
 
+    // Form is valid, show confirmation dialog
+    setShowSubmitDialog(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowSubmitDialog(false);
+
     // Form is valid, proceed with API submission
     setIsSubmitting(true);
+
+    // Validate form data with Zod
+    const result = formSchema.safeParse(formData);
+
+    if (!result.success) {
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -188,7 +289,7 @@ export default function FormPage() {
       // Capture user agent
       const userAgent = navigator.userAgent;
 
-      const response = await fetch("/api/configuration/submit", {
+      const response = await fetch("/api/form/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -203,7 +304,7 @@ export default function FormPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMessage = data.error || "Failed to submit configuration";
+        const errorMessage = data.error || "Failed to submit form";
         setSubmitError(errorMessage);
         toast.error(errorMessage);
         setIsSubmitting(false);
@@ -213,7 +314,7 @@ export default function FormPage() {
       // Success
       setSubmitSuccess(true);
       setIsSubmitting(false);
-      toast.success("Configuration submitted successfully!");
+      toast.success("Form submitted successfully!");
 
       // Reset form after 2 seconds
       setTimeout(() => {
@@ -221,8 +322,7 @@ export default function FormPage() {
           restaurantName: "",
           outletName: "",
           saPassword: "",
-          nonSaUsername: "",
-          nonSaPassword: "",
+          nonSaCredentials: [{ username: "", password: "" }],
           anydeskUsername: "",
           anydeskPassword: "",
           ultraviewerUsername: "",
@@ -264,7 +364,7 @@ export default function FormPage() {
         <div className="bg-card rounded-lg shadow border p-3 mb-3">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
             <h1 className="text-xl md:text-2xl font-bold">
-              Restaurant Configuration
+              Restaurant Form
             </h1>
             <div className="px-3 py-1.5 bg-primary/10 rounded-md border border-primary/20 self-start">
               <span className="text-xs font-medium">Welcome, {userName}</span>
@@ -393,88 +493,113 @@ export default function FormPage() {
               </div>
             </div>
 
-            {/* Non-SA Section */}
+            {/* Non-SA Section - Dynamic */}
             <div className="bg-card rounded-lg shadow border p-4">
-              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
-                Non-SA Credentials
-              </h2>
-              <div className="space-y-3">
-                <div>
-                  <label
-                    htmlFor="nonSaUsername"
-                    className="block text-xs font-medium mb-1"
-                  >
-                    Username <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="nonSaUsername"
-                    name="nonSaUsername"
-                    value={formData.nonSaUsername}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
-                      errors.nonSaUsername ? "border-red-500" : ""
-                    }`}
-                    required
-                  />
-                  {errors.nonSaUsername && (
-                    <p className="text-red-500 text-xs mt-0.5">
-                      {errors.nonSaUsername}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="nonSaPassword"
-                    className="block text-xs font-medium mb-1"
-                  >
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      id="nonSaPassword"
-                      name="nonSaPassword"
-                      value={formData.nonSaPassword}
-                      onChange={handleInputChange}
-                      className={`flex-1 px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary opacity-60 cursor-not-allowed ${
-                        errors.nonSaPassword ? "border-red-500" : ""
-                      }`}
-                      disabled
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleGeneratePassword("nonSaPassword")}
-                      className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title="Regenerate password"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyPassword("nonSaPassword")}
-                      className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title={
-                        copiedField === "nonSaPassword"
-                          ? "Copied!"
-                          : "Copy password"
-                      }
-                    >
-                      {copiedField === "nonSaPassword" ? (
-                        <Check className="w-3.5 h-3.5 text-green-600" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
+              <div className="flex justify-between items-center mb-2 pb-1.5 border-b">
+                <h2 className="text-lg font-bold">Non-SA Credentials</h2>
+                <button
+                  type="button"
+                  onClick={addNonSaCredential}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-primary text-primary-foreground text-xs rounded-md hover:bg-primary/90 transition-colors"
+                  title="Add Non-SA credential"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add
+                </button>
+              </div>
+              <div className="space-y-4">
+                {formData.nonSaCredentials.map((credential, index) => (
+                  <div key={index} className="p-3 border rounded-md bg-muted/30 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold">Non-SA #{index + 1}</span>
+                      {formData.nonSaCredentials.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeNonSaCredential(index)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Remove this credential"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
-                    </button>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor={`nonSaUsername-${index}`}
+                        className="block text-xs font-medium mb-1"
+                      >
+                        Username <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id={`nonSaUsername-${index}`}
+                        value={credential.username}
+                        onChange={(e) => handleNonSaChange(index, 'username', e.target.value)}
+                        className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
+                          errors[`nonSaCredentials.${index}.username`] ? "border-red-500" : ""
+                        }`}
+                        required
+                      />
+                      {errors[`nonSaCredentials.${index}.username`] && (
+                        <p className="text-red-500 text-xs mt-0.5">
+                          {errors[`nonSaCredentials.${index}.username`]}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor={`nonSaPassword-${index}`}
+                        className="block text-xs font-medium mb-1"
+                      >
+                        Password <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          id={`nonSaPassword-${index}`}
+                          value={credential.password}
+                          onChange={(e) => handleNonSaChange(index, 'password', e.target.value)}
+                          className={`flex-1 px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary opacity-60 cursor-not-allowed ${
+                            errors[`nonSaCredentials.${index}.password`] ? "border-red-500" : ""
+                          }`}
+                          disabled
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleGenerateNonSaPassword(index)}
+                          className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                          title="Regenerate password"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyNonSaPassword(index)}
+                          className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                          title={
+                            copiedField === `nonSa-${index}`
+                              ? "Copied!"
+                              : "Copy password"
+                          }
+                        >
+                          {copiedField === `nonSa-${index}` ? (
+                            <Check className="w-3.5 h-3.5 text-green-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                      {errors[`nonSaCredentials.${index}.password`] && (
+                        <p className="text-red-500 text-xs mt-0.5">
+                          {errors[`nonSaCredentials.${index}.password`]}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  {errors.nonSaPassword && (
-                    <p className="text-red-500 text-xs mt-0.5">
-                      {errors.nonSaPassword}
-                    </p>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -566,10 +691,10 @@ export default function FormPage() {
             </div>
           </div>
 
-          {/* Configuration Tasks */}
+          {/* Form Tasks */}
           <div className="bg-card rounded-lg shadow border p-4">
             <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
-              Configuration Tasks
+              Form Tasks
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               <div className="flex items-start space-x-2 p-1.5 rounded hover:bg-muted/50 transition-colors">
@@ -727,12 +852,12 @@ export default function FormPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit and Draft Buttons */}
           <div className="bg-card rounded-lg shadow border p-4">
             {/* Success Message */}
             {submitSuccess && (
               <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-md text-sm">
-                Configuration submitted successfully! Form will reset in a
+                Form submitted successfully! Form will reset in a
                 moment.
               </div>
             )}
@@ -744,19 +869,96 @@ export default function FormPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting || submitSuccess}
-              className="w-full bg-primary text-primary-foreground py-2 px-4 text-sm rounded-md font-semibold hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting
-                ? "Submitting..."
-                : submitSuccess
-                ? "Submitted!"
-                : "Submit Configuration"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="flex items-center justify-center gap-2 flex-1 bg-secondary text-secondary-foreground py-2 px-4 text-sm rounded-md font-semibold hover:bg-secondary/80 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 border"
+              >
+                <Save className="w-4 h-4" />
+                Save as Draft
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || submitSuccess}
+                className="flex-1 bg-primary text-primary-foreground py-2 px-4 text-sm rounded-md font-semibold hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting
+                  ? "Submitting..."
+                  : submitSuccess
+                  ? "Submitted!"
+                  : "Submit Form"}
+              </button>
+            </div>
           </div>
         </form>
+
+        {/* Submit Confirmation Dialog */}
+        <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Submission</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to submit this form for{" "}
+                <span className="font-semibold text-foreground">
+                  {formData.restaurantName} - {formData.outletName}
+                </span>
+                ?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setShowSubmitDialog(false)}
+                className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmit}
+                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Confirm Submit
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Draft Confirmation Dialog */}
+        <Dialog open={showDraftConfirm} onOpenChange={setShowDraftConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save as Draft</DialogTitle>
+              <DialogDescription>
+                Do you want to save this form as a draft for{" "}
+                <span className="font-semibold text-foreground">
+                  {formData.restaurantName} - {formData.outletName}
+                </span>
+                ?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={() => setShowDraftConfirm(false)}
+                className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSaveDraft}
+                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Save Draft
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Draft Panel */}
+        <DraftPanel onLoadDraft={handleLoadDraft} />
       </div>
     </div>
   );
