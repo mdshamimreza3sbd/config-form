@@ -60,7 +60,9 @@ export const saveDraft = (formData: any): DraftData => {
 
   localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(drafts));
 
-  return existingIndex !== -1 ? drafts[existingIndex] : drafts[drafts.length - 1];
+  return existingIndex !== -1
+    ? drafts[existingIndex]
+    : drafts[drafts.length - 1];
 };
 
 // Delete a draft by ID
