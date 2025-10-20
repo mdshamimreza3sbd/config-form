@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
       anydeskUninstall: data.anydeskUninstall || false,
       ultraviewerPassAndId: data.ultraviewerPassAndId || false,
       posAdminPassChange: data.posAdminPassChange || false,
+      remarks: data.remarks || "",
       userAgent: data.userAgent || "",
       ipAddress: ipAddress,
     });

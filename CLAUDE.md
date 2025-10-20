@@ -78,6 +78,7 @@ Stores restaurant security form submissions with:
 - Required fields: restaurantName, outletName, saPassword, nonSaCredentials (array of {username, password})
 - Optional remote access: anydeskUsername, anydeskPassword, ultraviewerUsername, ultraviewerPassword
 - Boolean checkboxes: saPassChange, syncedUserPassChange, nonSaPassChange, windowsAuthDisable, sqlCustomPort, firewallOnAllPcs, anydeskUninstall, ultraviewerPassAndId, posAdminPassChange
+- Optional text field: remarks (for additional notes)
 - Metadata: userId, username, userAgent, ipAddress, timestamps
 - Indexes: `{userId: 1, createdAt: -1}` and `{restaurantName: 1, outletName: 1}`
 - Note: nonSaCredentials supports multiple Non-SA users with Add/Remove functionality
@@ -95,6 +96,7 @@ Stores restaurant security form submissions with:
 - Supports multiple Non-SA credentials with dynamic Add/Remove buttons (minimum 1 required)
 - Password fields are disabled; only regenerate button can change them
 - Copy button for generated passwords with visual feedback (green checkmark)
+- Includes optional remarks textarea for additional notes
 - Compact UI design with reduced spacing
 - react-hot-toast for success/error notifications
 - Form resets 3 seconds after successful submission

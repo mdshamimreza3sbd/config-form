@@ -25,6 +25,7 @@ export interface IForm extends Document {
   anydeskUninstall: boolean;
   ultraviewerPassAndId: boolean;
   posAdminPassChange: boolean;
+  remarks?: string;
   userAgent?: string;
   ipAddress?: string;
   createdAt: Date;
@@ -126,6 +127,10 @@ const FormSchema: Schema = new Schema(
     posAdminPassChange: {
       type: Boolean,
       default: false,
+    },
+    remarks: {
+      type: String,
+      trim: true,
     },
     userAgent: {
       type: String,

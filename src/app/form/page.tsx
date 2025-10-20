@@ -42,6 +42,7 @@ const formSchema = z.object({
   anydeskUninstall: z.boolean(),
   ultraviewerPassAndId: z.boolean(),
   posAdminPassChange: z.boolean(),
+  remarks: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -69,6 +70,7 @@ export default function FormPage() {
     anydeskUninstall: false,
     ultraviewerPassAndId: false,
     posAdminPassChange: false,
+    remarks: "",
   });
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -336,6 +338,7 @@ export default function FormPage() {
           anydeskUninstall: false,
           ultraviewerPassAndId: false,
           posAdminPassChange: false,
+          remarks: "",
         });
         setSubmitSuccess(false);
       }, 3000);
@@ -849,6 +852,30 @@ export default function FormPage() {
                   POS Admin Password Change
                 </label>
               </div>
+            </div>
+          </div>
+
+          {/* Remarks Section */}
+          <div className="bg-card rounded-lg shadow border p-4">
+            <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
+              Remarks
+            </h2>
+            <div>
+              <label
+                htmlFor="remarks"
+                className="block text-xs font-medium mb-1"
+              >
+                Additional Notes (Optional)
+              </label>
+              <textarea
+                id="remarks"
+                name="remarks"
+                value={formData.remarks}
+                onChange={(e) => setFormData(prev => ({ ...prev, remarks: e.target.value }))}
+                rows={4}
+                className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Enter any additional notes or remarks here..."
+              />
             </div>
           </div>
 
