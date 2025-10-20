@@ -4,96 +4,146 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Next.js 15 application with TypeScript, using the App Router architecture. The project is configured with shadcn/ui components (New York style) and Tailwind CSS v4 for styling, along with Mongoose for MongoDB integration.
+This is a Restaurant Configuration Management System built with Next.js 15, featuring JWT authentication, MongoDB integration, and a form-based interface for managing restaurant security configurations. The application allows authenticated users to submit and track restaurant configuration tasks including password changes, firewall settings, and remote access credentials.
 
 ## Development Commands
 
-**Development server:**
-```bash
-npm run dev
-# Uses Turbopack for faster development builds
-# Server runs on http://localhost:3000
-```
+**Package Manager:** This project uses **pnpm** (not npm)
 
-**Production build:**
 ```bash
-npm run build
-# Uses Turbopack for optimized production builds
-```
-
-**Production server:**
-```bash
-npm start
-# Starts the production server
+pnpm install         # Install dependencies
+pnpm dev            # Development server with Turbopack (http://localhost:3000)
+pnpm build          # Production build with Turbopack
+pnpm start          # Start production server
 ```
 
 ## Architecture & Project Structure
 
 **Tech Stack:**
 - Next.js 15.5.6 with App Router
-- React 19.1.0
-- TypeScript 5
-- Tailwind CSS v4 (with PostCSS v4)
-- Mongoose 8.19.1 for MongoDB
-- shadcn/ui components (New York style variant)
-- Lucide React for icons
+- React 19.1.0 with TypeScript 5
+- MongoDB with Mongoose 8.19.1
+- JWT Authentication (jsonwebtoken)
+- Zod for form validation
+- Tailwind CSS v4 with shadcn/ui (New York style)
+- react-hot-toast for notifications
 
 **Directory Structure:**
 ```
 src/
-├── app/                 # Next.js App Router pages
-│   ├── layout.tsx      # Root layout with Geist fonts
-│   ├── page.tsx        # Homepage
-│   └── globals.css     # Global styles with Tailwind v4 and CSS variables
-└── lib/
-    └── utils.ts        # Utility functions (cn helper for class merging)
+├── app/
+│   ├── page.tsx                          # Login page
+│   ├── form/page.tsx                     # Main configuration form (protected route)
+│   ├── layout.tsx                        # Root layout with Geist fonts
+│   ├── globals.css                       # Tailwind v4 CSS with custom variables
+│   └── api/
+│       ├── auth/
+│       │   ├── login/route.ts            # POST: User login, returns JWT
+│       │   ├── verify/route.ts           # GET: Verify JWT token
+│       │   └── logout/route.ts           # POST: User logout
+│       └── configuration/
+│           ├── submit/route.ts           # POST: Submit configuration
+│           └── list/route.ts             # GET: List user configurations
+├── lib/
+│   ├── mongodb.ts                        # MongoDB connection with caching
+│   ├── jwt.ts                            # JWT utilities (verifyToken, verifyRequest)
+│   └── utils.ts                          # Tailwind class merging (cn helper)
+└── models/
+    ├── User.ts                           # User schema with plain-text password comparison
+    └── Configuration.ts                  # Configuration schema with indexes
 ```
 
+## Authentication & Security
+
+**JWT Authentication Flow:**
+1. User logs in at `/` (login page) with username/password
+2. Backend validates credentials and returns JWT token
+3. Token stored in localStorage as 'token' and 'userName'
+4. Protected routes (`/form`) verify token via `/api/auth/verify`
+5. All API requests include JWT in Authorization header: `Bearer ${token}`
+
+**Authentication Utilities (`src/lib/jwt.ts`):**
+- `verifyToken(token)` - Validates JWT and returns payload
+- `getTokenFromRequest(request)` - Extracts token from cookie or Authorization header
+- `verifyRequest(request)` - Combined token extraction and verification
+
+**User Model (`src/models/User.ts`):**
+- Uses plain-text password comparison (NOT hashed)
+- Method: `comparePassword(candidatePassword)` for authentication
+
+## Database Models
+
+**Configuration Model (`src/models/Configuration.ts`):**
+Stores restaurant security configuration submissions with:
+- Required fields: restaurantName, outletName, saPassword, nonSaUsername, nonSaPassword
+- Optional remote access: anydeskUsername, anydeskPassword, ultraviewerUsername, ultraviewerPassword
+- Boolean checkboxes: saPassChange, syncedUserPassChange, nonSaPassChange, windowsAuthDisable, sqlCustomPort, firewallOnAllPcs, anydeskUninstall, ultraviewerPassAndId, posAdminPassChange
+- Metadata: userId, username, userAgent, ipAddress, timestamps
+- Indexes: `{userId: 1, createdAt: -1}` and `{restaurantName: 1, outletName: 1}`
+
+**MongoDB Connection (`src/lib/mongodb.ts`):**
+- Uses global caching to prevent multiple connections in development
+- Handles Next.js hot reloading properly
+- Requires `MONGODB_URI` environment variable
+
+## Form Behavior & Validation
+
+**Configuration Form (`src/app/form/page.tsx`):**
+- Uses Zod schema for client-side validation
+- Auto-generates 16-character passwords for SA and Non-SA fields (excludes single/double quotes)
+- Password fields are disabled; only regenerate button can change them
+- Copy button for generated passwords with visual feedback (green checkmark)
+- Compact UI design with reduced spacing
+- react-hot-toast for success/error notifications
+- Form resets 3 seconds after successful submission
+- Captures userAgent on submission
+
+**Password Generation:**
+- Length: 16 characters
+- Character sets: uppercase, lowercase, numbers, symbols
+- Excludes: single quotes ('), double quotes (")
+- Ensures at least one character from each category
+
+## Environment Variables
+
+Required in `.env` or `.env.local`:
+```bash
+MONGODB_URI=mongodb://localhost:27017/your-database-name
+JWT_SECRET=your-secret-key-change-this-in-production
+NODE_ENV=development
+```
+
+## Styling & UI
+
+**Tailwind CSS v4:**
+- CSS-first configuration in `src/app/globals.css`
+- Custom CSS variables with `@theme inline`
+- OKLCH color space for custom palette
+- Compact spacing: reduced padding, margins, and gaps throughout
+
+**shadcn/ui Configuration:**
+- Style: "new-york"
+- RSC enabled, CSS variables mode
+- Base color: neutral
+- Icon library: lucide-react
+- Components path: `src/components/ui/`
+
 **Import Aliases:**
-The project uses path aliases configured in tsconfig.json and components.json:
 - `@/*` → `./src/*`
 - `@/components` → shadcn/ui components
 - `@/lib` → utility functions
 - `@/ui` → UI components
 - `@/hooks` → custom React hooks
 
-## Styling & UI
+## API Routes
 
-**Tailwind CSS v4:**
-- Uses CSS-first configuration in `src/app/globals.css`
-- Custom CSS variables defined with `@theme inline`
-- Dark mode support with `.dark` class variant
-- Custom color palette using OKLCH color space
-- Design tokens for radius, colors, and spacing
+**Authentication:**
+- `POST /api/auth/login` - Login with username/password, returns JWT
+- `GET /api/auth/verify` - Verify JWT token validity
+- `POST /api/auth/logout` - Logout (clears token)
 
-**shadcn/ui Configuration:**
-- Style: "new-york"
-- React Server Components enabled (`rsc: true`)
-- CSS variables mode enabled
-- Base color: neutral
-- Icon library: lucide-react
+**Configuration:**
+- `POST /api/configuration/submit` - Submit new configuration (requires JWT)
+- `GET /api/configuration/list` - List user's configurations (requires JWT)
 
-When adding shadcn/ui components, they should be placed in `src/components/ui/` following the aliases configuration.
-
-## Database
-
-The project includes Mongoose for MongoDB integration. When creating models or database connections:
-- Models should follow Mongoose schema patterns
-- Connection logic should handle Next.js development hot reloading
-- Use environment variables for database connection strings
-
-## Fonts
-
-The project uses Next.js font optimization with Geist fonts:
-- `--font-geist-sans` for sans-serif text
-- `--font-geist-mono` for monospace text
-
-These are loaded in `src/app/layout.tsx` and available as CSS variables.
-
-## TypeScript Configuration
-
-- Target: ES2017
-- Strict mode enabled
-- Module resolution: bundler
-- Path aliases configured for clean imports
-- Next.js plugin enabled for type checking
+All protected routes validate JWT using `verifyRequest()` from `@/lib/jwt`
