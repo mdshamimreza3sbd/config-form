@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat \"C:\\Users\\mdsha\\Desktop\\form\\src\\app\\page.tsx\")",
+      "Bash(npm install zod)",
+      "Bash(pnpm install zod)",
+      "Bash(pnpm install jsonwebtoken bcryptjs)",
+      "Bash(pnpm install -D @types/jsonwebtoken @types/bcryptjs)",
+      "Bash(pnpm uninstall bcryptjs @types/bcryptjs)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
