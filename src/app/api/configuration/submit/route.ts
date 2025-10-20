@@ -18,6 +18,13 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json();
 
+    // Extract IP address from request headers
+    const ipAddress =
+      request.headers.get("x-forwarded-for")?.split(",")[0] ||
+      request.headers.get("x-real-ip") ||
+      request.headers.get("cf-connecting-ip") ||
+      "unknown";
+
     // Validate required fields
     const requiredFields = [
       "restaurantName",
@@ -58,6 +65,8 @@ export async function POST(request: NextRequest) {
       anydeskUninstall: data.anydeskUninstall || false,
       ultraviewerPassAndId: data.ultraviewerPassAndId || false,
       posAdminPassChange: data.posAdminPassChange || false,
+      userAgent: data.userAgent || "",
+      ipAddress: ipAddress,
     });
 
     return NextResponse.json(

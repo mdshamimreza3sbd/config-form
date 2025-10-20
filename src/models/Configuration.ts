@@ -21,6 +21,8 @@ export interface IConfiguration extends Document {
   anydeskUninstall: boolean;
   ultraviewerPassAndId: boolean;
   posAdminPassChange: boolean;
+  userAgent?: string;
+  ipAddress?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -107,6 +109,14 @@ const ConfigurationSchema: Schema = new Schema(
     posAdminPassChange: {
       type: Boolean,
       default: false,
+    },
+    userAgent: {
+      type: String,
+      trim: true,
+    },
+    ipAddress: {
+      type: String,
+      trim: true,
     },
   },
   {

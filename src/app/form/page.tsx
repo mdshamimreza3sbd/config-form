@@ -1,17 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Copy, RefreshCw, Check } from 'lucide-react';
-import { z } from 'zod';
+import { Check, Copy, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { z } from "zod";
 
 // Zod schema for form validation
 const formSchema = z.object({
-  restaurantName: z.string().min(1, 'Restaurant name is required'),
-  outletName: z.string().min(1, 'Outlet name is required'),
-  saPassword: z.string().min(1, 'SA password is required'),
-  nonSaUsername: z.string().min(1, 'Non-SA username is required'),
-  nonSaPassword: z.string().min(1, 'Non-SA password is required'),
+  restaurantName: z.string().min(1, "Restaurant name is required"),
+  outletName: z.string().min(1, "Outlet name is required"),
+  saPassword: z.string().min(1, "SA password is required"),
+  nonSaUsername: z.string().min(1, "Non-SA username is required"),
+  nonSaPassword: z.string().min(1, "Non-SA password is required"),
   anydeskUsername: z.string().optional(),
   anydeskPassword: z.string().optional(),
   ultraviewerUsername: z.string().optional(),
@@ -33,17 +34,17 @@ type FormData = z.infer<typeof formSchema>;
 export default function FormPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState("");
   const [formData, setFormData] = useState<FormData>({
-    restaurantName: '',
-    outletName: '',
-    saPassword: '',
-    nonSaUsername: '',
-    nonSaPassword: '',
-    anydeskUsername: '',
-    anydeskPassword: '',
-    ultraviewerUsername: '',
-    ultraviewerPassword: '',
+    restaurantName: "",
+    outletName: "",
+    saPassword: "",
+    nonSaUsername: "",
+    nonSaPassword: "",
+    anydeskUsername: "",
+    anydeskPassword: "",
+    ultraviewerUsername: "",
+    ultraviewerPassword: "",
     saPassChange: false,
     syncedUserPassChange: false,
     nonSaPassChange: false,
@@ -59,33 +60,33 @@ export default function FormPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState("");
 
   // Check authentication with JWT
   useEffect(() => {
     const verifyAuth = async () => {
-      const storedUserName = localStorage.getItem('userName');
-      const token = localStorage.getItem('token');
+      const storedUserName = localStorage.getItem("userName");
+      const token = localStorage.getItem("token");
 
       if (!storedUserName || !token) {
-        router.push('/');
+        router.push("/");
         return;
       }
 
       try {
         // Verify token with the backend
-        const response = await fetch('/api/auth/verify', {
-          method: 'GET',
+        const response = await fetch("/api/auth/verify", {
+          method: "GET",
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
         if (!response.ok) {
           // Token is invalid, redirect to login
-          localStorage.removeItem('userName');
-          localStorage.removeItem('token');
-          router.push('/');
+          localStorage.removeItem("userName");
+          localStorage.removeItem("token");
+          router.push("/");
           return;
         }
 
@@ -93,10 +94,10 @@ export default function FormPage() {
         setUserName(data.user.username);
         setIsLoading(false);
       } catch (error) {
-        console.error('Auth verification error:', error);
-        localStorage.removeItem('userName');
-        localStorage.removeItem('token');
-        router.push('/');
+        console.error("Auth verification error:", error);
+        localStorage.removeItem("userName");
+        localStorage.removeItem("token");
+        router.push("/");
       }
     };
 
@@ -105,13 +106,13 @@ export default function FormPage() {
 
   // Password generator function
   const generatePassword = (length: number = 16): string => {
-    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const numbers = '0123456789';
-    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*()_+-=[]{}|;:,.<>?";
     const allChars = uppercase + lowercase + numbers + symbols;
 
-    let password = '';
+    let password = "";
     // Ensure at least one of each type
     password += uppercase[Math.floor(Math.random() * uppercase.length)];
     password += lowercase[Math.floor(Math.random() * lowercase.length)];
@@ -124,20 +125,23 @@ export default function FormPage() {
     }
 
     // Shuffle the password
-    return password.split('').sort(() => Math.random() - 0.5).join('');
+    return password
+      .split("")
+      .sort(() => Math.random() - 0.5)
+      .join("");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleGeneratePassword = (fieldName: string) => {
     const newPassword = generatePassword(16);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [fieldName]: newPassword,
     }));
@@ -145,7 +149,7 @@ export default function FormPage() {
 
   const handleCopyPassword = async (fieldName: string) => {
     const password = formData[fieldName as keyof typeof formData];
-    if (typeof password === 'string' && password) {
+    if (typeof password === "string" && password) {
       await navigator.clipboard.writeText(password);
       setCopiedField(fieldName);
       setTimeout(() => setCopiedField(null), 2000);
@@ -157,7 +161,7 @@ export default function FormPage() {
 
     // Clear previous errors and messages
     setErrors({});
-    setSubmitError('');
+    setSubmitError("");
     setSubmitSuccess(false);
 
     // Validate form data with Zod
@@ -179,21 +183,29 @@ export default function FormPage() {
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
-      const response = await fetch('/api/configuration/submit', {
-        method: 'POST',
+      // Capture user agent
+      const userAgent = navigator.userAgent;
+
+      const response = await fetch("/api/configuration/submit", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(result.data),
+        body: JSON.stringify({
+          ...result.data,
+          userAgent,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setSubmitError(data.error || 'Failed to submit configuration');
+        const errorMessage = data.error || "Failed to submit configuration";
+        setSubmitError(errorMessage);
+        toast.error(errorMessage);
         setIsSubmitting(false);
         return;
       }
@@ -201,19 +213,20 @@ export default function FormPage() {
       // Success
       setSubmitSuccess(true);
       setIsSubmitting(false);
+      toast.success("Configuration submitted successfully!");
 
       // Reset form after 2 seconds
       setTimeout(() => {
         setFormData({
-          restaurantName: '',
-          outletName: '',
-          saPassword: '',
-          nonSaUsername: '',
-          nonSaPassword: '',
-          anydeskUsername: '',
-          anydeskPassword: '',
-          ultraviewerUsername: '',
-          ultraviewerPassword: '',
+          restaurantName: "",
+          outletName: "",
+          saPassword: "",
+          nonSaUsername: "",
+          nonSaPassword: "",
+          anydeskUsername: "",
+          anydeskPassword: "",
+          ultraviewerUsername: "",
+          ultraviewerPassword: "",
           saPassChange: false,
           syncedUserPassChange: false,
           nonSaPassChange: false,
@@ -227,8 +240,10 @@ export default function FormPage() {
         setSubmitSuccess(false);
       }, 3000);
     } catch (error: any) {
-      console.error('Submit error:', error);
-      setSubmitError('An error occurred. Please try again.');
+      console.error("Submit error:", error);
+      const errorMessage = "An error occurred. Please try again.";
+      setSubmitError(errorMessage);
+      toast.error(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -248,7 +263,9 @@ export default function FormPage() {
         {/* Header */}
         <div className="bg-card rounded-lg shadow border p-3 mb-3">
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-            <h1 className="text-xl md:text-2xl font-bold">Restaurant Configuration</h1>
+            <h1 className="text-xl md:text-2xl font-bold">
+              Restaurant Configuration
+            </h1>
             <div className="px-3 py-1.5 bg-primary/10 rounded-md border border-primary/20 self-start">
               <span className="text-xs font-medium">Welcome, {userName}</span>
             </div>
@@ -258,10 +275,15 @@ export default function FormPage() {
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Basic Information */}
           <div className="bg-card rounded-lg shadow border p-4">
-            <h2 className="text-lg font-bold mb-3 pb-2 border-b">Basic Information</h2>
+            <h2 className="text-lg font-bold mb-3 pb-2 border-b">
+              Basic Information
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="restaurantName" className="block text-xs font-medium mb-1">
+                <label
+                  htmlFor="restaurantName"
+                  className="block text-xs font-medium mb-1"
+                >
                   Restaurant Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -270,16 +292,23 @@ export default function FormPage() {
                   name="restaurantName"
                   value={formData.restaurantName}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${errors.restaurantName ? 'border-red-500' : ''}`}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
+                    errors.restaurantName ? "border-red-500" : ""
+                  }`}
                   required
                 />
                 {errors.restaurantName && (
-                  <p className="text-red-500 text-xs mt-0.5">{errors.restaurantName}</p>
+                  <p className="text-red-500 text-xs mt-0.5">
+                    {errors.restaurantName}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="outletName" className="block text-xs font-medium mb-1">
+                <label
+                  htmlFor="outletName"
+                  className="block text-xs font-medium mb-1"
+                >
                   Outlet Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -288,11 +317,15 @@ export default function FormPage() {
                   name="outletName"
                   value={formData.outletName}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${errors.outletName ? 'border-red-500' : ''}`}
+                  className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
+                    errors.outletName ? "border-red-500" : ""
+                  }`}
                   required
                 />
                 {errors.outletName && (
-                  <p className="text-red-500 text-xs mt-0.5">{errors.outletName}</p>
+                  <p className="text-red-500 text-xs mt-0.5">
+                    {errors.outletName}
+                  </p>
                 )}
               </div>
             </div>
@@ -302,10 +335,15 @@ export default function FormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* SA Section */}
             <div className="bg-card rounded-lg shadow border p-4">
-              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">SA Credentials</h2>
+              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
+                SA Credentials
+              </h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="saPassword" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="saPassword"
+                    className="block text-xs font-medium mb-1"
+                  >
                     SA Password <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-1.5">
@@ -315,13 +353,15 @@ export default function FormPage() {
                       name="saPassword"
                       value={formData.saPassword}
                       onChange={handleInputChange}
-                      className={`flex-1 px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary opacity-60 cursor-not-allowed ${errors.saPassword ? 'border-red-500' : ''}`}
+                      className={`flex-1 px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary opacity-60 cursor-not-allowed ${
+                        errors.saPassword ? "border-red-500" : ""
+                      }`}
                       required
                       disabled
                     />
                     <button
                       type="button"
-                      onClick={() => handleGeneratePassword('saPassword')}
+                      onClick={() => handleGeneratePassword("saPassword")}
                       className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
                       title="Regenerate password"
                     >
@@ -329,11 +369,15 @@ export default function FormPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleCopyPassword('saPassword')}
+                      onClick={() => handleCopyPassword("saPassword")}
                       className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title={copiedField === 'saPassword' ? 'Copied!' : 'Copy password'}
+                      title={
+                        copiedField === "saPassword"
+                          ? "Copied!"
+                          : "Copy password"
+                      }
                     >
-                      {copiedField === 'saPassword' ? (
+                      {copiedField === "saPassword" ? (
                         <Check className="w-3.5 h-3.5 text-green-600" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
@@ -341,7 +385,9 @@ export default function FormPage() {
                     </button>
                   </div>
                   {errors.saPassword && (
-                    <p className="text-red-500 text-xs mt-0.5">{errors.saPassword}</p>
+                    <p className="text-red-500 text-xs mt-0.5">
+                      {errors.saPassword}
+                    </p>
                   )}
                 </div>
               </div>
@@ -349,10 +395,15 @@ export default function FormPage() {
 
             {/* Non-SA Section */}
             <div className="bg-card rounded-lg shadow border p-4">
-              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">Non-SA Credentials</h2>
+              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
+                Non-SA Credentials
+              </h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="nonSaUsername" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="nonSaUsername"
+                    className="block text-xs font-medium mb-1"
+                  >
                     Username <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -361,16 +412,23 @@ export default function FormPage() {
                     name="nonSaUsername"
                     value={formData.nonSaUsername}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${errors.nonSaUsername ? 'border-red-500' : ''}`}
+                    className={`w-full px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary ${
+                      errors.nonSaUsername ? "border-red-500" : ""
+                    }`}
                     required
                   />
                   {errors.nonSaUsername && (
-                    <p className="text-red-500 text-xs mt-0.5">{errors.nonSaUsername}</p>
+                    <p className="text-red-500 text-xs mt-0.5">
+                      {errors.nonSaUsername}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="nonSaPassword" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="nonSaPassword"
+                    className="block text-xs font-medium mb-1"
+                  >
                     Password <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-1.5">
@@ -380,13 +438,15 @@ export default function FormPage() {
                       name="nonSaPassword"
                       value={formData.nonSaPassword}
                       onChange={handleInputChange}
-                      className={`flex-1 px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary opacity-60 cursor-not-allowed ${errors.nonSaPassword ? 'border-red-500' : ''}`}
+                      className={`flex-1 px-3 py-1.5 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary opacity-60 cursor-not-allowed ${
+                        errors.nonSaPassword ? "border-red-500" : ""
+                      }`}
                       disabled
                       required
                     />
                     <button
                       type="button"
-                      onClick={() => handleGeneratePassword('nonSaPassword')}
+                      onClick={() => handleGeneratePassword("nonSaPassword")}
                       className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
                       title="Regenerate password"
                     >
@@ -394,11 +454,15 @@ export default function FormPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleCopyPassword('nonSaPassword')}
+                      onClick={() => handleCopyPassword("nonSaPassword")}
                       className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title={copiedField === 'nonSaPassword' ? 'Copied!' : 'Copy password'}
+                      title={
+                        copiedField === "nonSaPassword"
+                          ? "Copied!"
+                          : "Copy password"
+                      }
                     >
-                      {copiedField === 'nonSaPassword' ? (
+                      {copiedField === "nonSaPassword" ? (
                         <Check className="w-3.5 h-3.5 text-green-600" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
@@ -406,7 +470,9 @@ export default function FormPage() {
                     </button>
                   </div>
                   {errors.nonSaPassword && (
-                    <p className="text-red-500 text-xs mt-0.5">{errors.nonSaPassword}</p>
+                    <p className="text-red-500 text-xs mt-0.5">
+                      {errors.nonSaPassword}
+                    </p>
                   )}
                 </div>
               </div>
@@ -417,10 +483,15 @@ export default function FormPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* AnyDesk Section */}
             <div className="bg-card rounded-lg shadow border p-4">
-              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">AnyDesk</h2>
+              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
+                AnyDesk
+              </h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="anydeskUsername" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="anydeskUsername"
+                    className="block text-xs font-medium mb-1"
+                  >
                     Username
                   </label>
                   <input
@@ -434,11 +505,14 @@ export default function FormPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="anydeskPassword" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="anydeskPassword"
+                    className="block text-xs font-medium mb-1"
+                  >
                     Password
                   </label>
                   <input
-                    type="password"
+                    type="text"
                     id="anydeskPassword"
                     name="anydeskPassword"
                     value={formData.anydeskPassword}
@@ -451,10 +525,15 @@ export default function FormPage() {
 
             {/* UltraViewer Section */}
             <div className="bg-card rounded-lg shadow border p-4">
-              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">UltraViewer</h2>
+              <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
+                UltraViewer
+              </h2>
               <div className="space-y-3">
                 <div>
-                  <label htmlFor="ultraviewerUsername" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="ultraviewerUsername"
+                    className="block text-xs font-medium mb-1"
+                  >
                     Username
                   </label>
                   <input
@@ -468,11 +547,14 @@ export default function FormPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="ultraviewerPassword" className="block text-xs font-medium mb-1">
+                  <label
+                    htmlFor="ultraviewerPassword"
+                    className="block text-xs font-medium mb-1"
+                  >
                     Password
                   </label>
                   <input
-                    type="password"
+                    type="text"
                     id="ultraviewerPassword"
                     name="ultraviewerPassword"
                     value={formData.ultraviewerPassword}
@@ -486,7 +568,9 @@ export default function FormPage() {
 
           {/* Configuration Tasks */}
           <div className="bg-card rounded-lg shadow border p-4">
-            <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">Configuration Tasks</h2>
+            <h2 className="text-lg font-bold mb-2 pb-1.5 border-b">
+              Configuration Tasks
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               <div className="flex items-start space-x-2 p-1.5 rounded hover:bg-muted/50 transition-colors">
                 <input
@@ -497,7 +581,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="saPassChange" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="saPassChange"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   SA Password Change
                 </label>
               </div>
@@ -511,7 +598,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="syncedUserPassChange" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="syncedUserPassChange"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   Synced User Password Change
                 </label>
               </div>
@@ -525,7 +615,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="nonSaPassChange" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="nonSaPassChange"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   Non-SA Pass Change (Read & Write Only)
                 </label>
               </div>
@@ -539,7 +632,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="windowsAuthDisable" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="windowsAuthDisable"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   Windows Authentication Disable
                 </label>
               </div>
@@ -553,7 +649,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="sqlCustomPort" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="sqlCustomPort"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   SQL Custom Port
                 </label>
               </div>
@@ -567,8 +666,11 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="firewallOnAllPcs" className="text-xs font-medium cursor-pointer flex-1">
-                  Firewall ON (All PCs)
+                <label
+                  htmlFor="firewallOnAllPcs"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
+                  Firewall ON
                 </label>
               </div>
 
@@ -581,7 +683,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="anydeskUninstall" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="anydeskUninstall"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   AnyDesk Uninstall
                 </label>
               </div>
@@ -595,7 +700,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="ultraviewerPassAndId" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="ultraviewerPassAndId"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   UltraViewer Password & New ID
                 </label>
               </div>
@@ -609,7 +717,10 @@ export default function FormPage() {
                   onChange={handleInputChange}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
                 />
-                <label htmlFor="posAdminPassChange" className="text-xs font-medium cursor-pointer flex-1">
+                <label
+                  htmlFor="posAdminPassChange"
+                  className="text-xs font-medium cursor-pointer flex-1"
+                >
                   POS Admin Password Change
                 </label>
               </div>
@@ -621,7 +732,8 @@ export default function FormPage() {
             {/* Success Message */}
             {submitSuccess && (
               <div className="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-md text-sm">
-                Configuration submitted successfully! Form will reset in a moment.
+                Configuration submitted successfully! Form will reset in a
+                moment.
               </div>
             )}
 
@@ -637,7 +749,11 @@ export default function FormPage() {
               disabled={isSubmitting || submitSuccess}
               className="w-full bg-primary text-primary-foreground py-2 px-4 text-sm rounded-md font-semibold hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Submitting...' : submitSuccess ? 'Submitted!' : 'Submit Configuration'}
+              {isSubmitting
+                ? "Submitting..."
+                : submitSuccess
+                ? "Submitted!"
+                : "Submit Configuration"}
             </button>
           </div>
         </form>

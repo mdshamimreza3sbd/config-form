@@ -6,7 +6,8 @@
       "Bash(pnpm install zod)",
       "Bash(pnpm install jsonwebtoken bcryptjs)",
       "Bash(pnpm install -D @types/jsonwebtoken @types/bcryptjs)",
-      "Bash(pnpm uninstall bcryptjs @types/bcryptjs)"
+      "Bash(pnpm uninstall bcryptjs @types/bcryptjs)",
+      "Bash(pnpm install react-hot-toast)"
     ],
     "deny": [],
     "ask": []
