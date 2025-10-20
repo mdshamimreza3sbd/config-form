@@ -80,6 +80,7 @@ export default function FormPage() {
   const [submitError, setSubmitError] = useState("");
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showReloadConfirm, setShowReloadConfirm] = useState(false);
 
   // Check authentication with JWT
   useEffect(() => {
@@ -134,6 +135,22 @@ export default function FormPage() {
       })),
     }));
   }, []);
+
+  // Prevent page reload if form has data
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (formData.restaurantName && formData.outletName) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [formData.restaurantName, formData.outletName]);
 
   // Password generator function
   const generatePassword = (length: number = 16): string => {
@@ -239,6 +256,20 @@ export default function FormPage() {
     setFormData(draft.formData);
   };
 
+  const handleReloadPage = () => {
+    setShowReloadConfirm(false);
+    window.location.reload();
+  };
+
+  const handleSaveDraftAndReload = () => {
+    saveDraft(formData);
+    toast.success("Draft saved successfully!");
+    setShowReloadConfirm(false);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -318,8 +349,8 @@ export default function FormPage() {
         setFormData({
           restaurantName: "",
           outletName: "",
-          saPassword: "",
-          nonSaCredentials: [{ username: "", password: "" }],
+          saPassword: generatePassword(16),
+          nonSaCredentials: [{ username: "", password: generatePassword(16) }],
           anydeskUsername: "",
           anydeskPassword: "",
           ultraviewerUsername: "",
@@ -958,6 +989,45 @@ export default function FormPage() {
                 className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
                 Save Draft
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reload Confirmation Dialog */}
+        <Dialog open={showReloadConfirm} onOpenChange={setShowReloadConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reload Page?</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes for{" "}
+                <span className="font-semibold text-foreground">
+                  {formData.restaurantName} - {formData.outletName}
+                </span>
+                . What would you like to do?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReloadConfirm(false)}
+                className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDraftAndReload}
+                className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground border rounded-md hover:bg-secondary/80 transition-colors"
+              >
+                Save Draft & Reload
+              </button>
+              <button
+                type="button"
+                onClick={handleReloadPage}
+                className="px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
+              >
+                Reload
               </button>
             </DialogFooter>
           </DialogContent>
