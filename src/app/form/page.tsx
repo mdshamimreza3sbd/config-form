@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Plus, RefreshCw, Trash2, Save } from "lucide-react";
+import { Check, Copy, Plus, Trash2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -123,6 +123,18 @@ export default function FormPage() {
     verifyAuth();
   }, [router]);
 
+  // Generate passwords on page load
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      saPassword: generatePassword(16),
+      nonSaCredentials: prev.nonSaCredentials.map((cred) => ({
+        ...cred,
+        password: generatePassword(16),
+      })),
+    }));
+  }, []);
+
   // Password generator function
   const generatePassword = (length: number = 16): string => {
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -171,7 +183,7 @@ export default function FormPage() {
   const addNonSaCredential = () => {
     setFormData((prev) => ({
       ...prev,
-      nonSaCredentials: [...prev.nonSaCredentials, { username: "", password: "" }],
+      nonSaCredentials: [...prev.nonSaCredentials, { username: "", password: generatePassword(16) }],
     }));
   };
 
@@ -185,23 +197,6 @@ export default function FormPage() {
     }
   };
 
-  const handleGeneratePassword = (fieldName: string) => {
-    const newPassword = generatePassword(16);
-    setFormData((prev) => ({
-      ...prev,
-      [fieldName]: newPassword,
-    }));
-  };
-
-  // Generate password for Non-SA credential
-  const handleGenerateNonSaPassword = (index: number) => {
-    const newPassword = generatePassword(16);
-    setFormData((prev) => {
-      const updated = [...prev.nonSaCredentials];
-      updated[index] = { ...updated[index], password: newPassword };
-      return { ...prev, nonSaCredentials: updated };
-    });
-  };
 
   const handleCopyPassword = async (fieldName: string) => {
     const password = formData[fieldName as keyof typeof formData];
@@ -464,14 +459,6 @@ export default function FormPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => handleGeneratePassword("saPassword")}
-                      className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title="Regenerate password"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => handleCopyPassword("saPassword")}
                       className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
                       title={
@@ -570,14 +557,6 @@ export default function FormPage() {
                           disabled
                           required
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateNonSaPassword(index)}
-                          className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                          title="Regenerate password"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </button>
                         <button
                           type="button"
                           onClick={() => handleCopyNonSaPassword(index)}
