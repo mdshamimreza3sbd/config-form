@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Plus, RefreshCw, Trash2, Save } from "lucide-react";
+import { Check, Copy, Plus, Trash2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -80,6 +80,7 @@ export default function FormPage() {
   const [submitError, setSubmitError] = useState("");
   const [showDraftConfirm, setShowDraftConfirm] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showReloadConfirm, setShowReloadConfirm] = useState(false);
 
   // Check authentication with JWT
   useEffect(() => {
@@ -123,12 +124,40 @@ export default function FormPage() {
     verifyAuth();
   }, [router]);
 
+  // Generate passwords on page load
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      saPassword: generatePassword(16),
+      nonSaCredentials: prev.nonSaCredentials.map((cred) => ({
+        ...cred,
+        password: generatePassword(16),
+      })),
+    }));
+  }, []);
+
+  // Prevent page reload if form has data
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (formData.restaurantName && formData.outletName) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [formData.restaurantName, formData.outletName]);
+
   // Password generator function
   const generatePassword = (length: number = 16): string => {
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lowercase = "abcdefghijklmnopqrstuvwxyz";
     const numbers = "0123456789";
-    const symbols = "!@#$%*_+-[],:.<>"; // Excluded: =, &, ', ", ;, ^, (, ), {, }, |, ?
+    const symbols = "@#";
     const allChars = uppercase + lowercase + numbers + symbols;
 
     let password = "";
@@ -171,7 +200,7 @@ export default function FormPage() {
   const addNonSaCredential = () => {
     setFormData((prev) => ({
       ...prev,
-      nonSaCredentials: [...prev.nonSaCredentials, { username: "", password: "" }],
+      nonSaCredentials: [...prev.nonSaCredentials, { username: "", password: generatePassword(16) }],
     }));
   };
 
@@ -185,23 +214,6 @@ export default function FormPage() {
     }
   };
 
-  const handleGeneratePassword = (fieldName: string) => {
-    const newPassword = generatePassword(16);
-    setFormData((prev) => ({
-      ...prev,
-      [fieldName]: newPassword,
-    }));
-  };
-
-  // Generate password for Non-SA credential
-  const handleGenerateNonSaPassword = (index: number) => {
-    const newPassword = generatePassword(16);
-    setFormData((prev) => {
-      const updated = [...prev.nonSaCredentials];
-      updated[index] = { ...updated[index], password: newPassword };
-      return { ...prev, nonSaCredentials: updated };
-    });
-  };
 
   const handleCopyPassword = async (fieldName: string) => {
     const password = formData[fieldName as keyof typeof formData];
@@ -242,6 +254,20 @@ export default function FormPage() {
 
   const handleLoadDraft = (draft: DraftData) => {
     setFormData(draft.formData);
+  };
+
+  const handleReloadPage = () => {
+    setShowReloadConfirm(false);
+    window.location.reload();
+  };
+
+  const handleSaveDraftAndReload = () => {
+    saveDraft(formData);
+    toast.success("Draft saved successfully!");
+    setShowReloadConfirm(false);
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -323,8 +349,8 @@ export default function FormPage() {
         setFormData({
           restaurantName: "",
           outletName: "",
-          saPassword: "",
-          nonSaCredentials: [{ username: "", password: "" }],
+          saPassword: generatePassword(16),
+          nonSaCredentials: [{ username: "", password: generatePassword(16) }],
           anydeskUsername: "",
           anydeskPassword: "",
           ultraviewerUsername: "",
@@ -464,14 +490,6 @@ export default function FormPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => handleGeneratePassword("saPassword")}
-                      className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                      title="Regenerate password"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => handleCopyPassword("saPassword")}
                       className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
                       title={
@@ -570,14 +588,6 @@ export default function FormPage() {
                           disabled
                           required
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleGenerateNonSaPassword(index)}
-                          className="px-2.5 py-1.5 bg-secondary hover:bg-secondary/80 border rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                          title="Regenerate password"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </button>
                         <button
                           type="button"
                           onClick={() => handleCopyNonSaPassword(index)}
@@ -979,6 +989,45 @@ export default function FormPage() {
                 className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
                 Save Draft
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reload Confirmation Dialog */}
+        <Dialog open={showReloadConfirm} onOpenChange={setShowReloadConfirm}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reload Page?</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes for{" "}
+                <span className="font-semibold text-foreground">
+                  {formData.restaurantName} - {formData.outletName}
+                </span>
+                . What would you like to do?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReloadConfirm(false)}
+                className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDraftAndReload}
+                className="px-4 py-2 text-sm font-medium bg-secondary text-secondary-foreground border rounded-md hover:bg-secondary/80 transition-colors"
+              >
+                Save Draft & Reload
+              </button>
+              <button
+                type="button"
+                onClick={handleReloadPage}
+                className="px-4 py-2 text-sm font-medium bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
+              >
+                Reload
               </button>
             </DialogFooter>
           </DialogContent>
